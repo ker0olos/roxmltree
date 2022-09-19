@@ -11,10 +11,6 @@ documentation = "https://docs.rs/roxmltree/"
 readme = "README.md"
 edition = "2018"
 
-[workspace]
-members = ["benches"]
-exclude = ["test-apps", "testing-tools"]
-
 [dependencies]
 xmlparser = "0.13.3"
 

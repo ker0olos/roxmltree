@@ -54,27 +54,16 @@ fn api_01() {
 <e a:attr='a_ns' b:attr='b_ns' attr='no_ns' xmlns:b='http://www.ietf.org' \
     xmlns:a='http://www.w3.org' xmlns='http://www.uvic.ca'/>
 ";
-
     let doc = Document::parse(data).unwrap();
     let p = doc.root_element();
 
+    assert_eq!(p.attribute("a:attr"), Some("a_ns"));
+    assert_eq!(p.attribute("b:attr"), Some("b_ns"));
     assert_eq!(p.attribute("attr"), Some("no_ns"));
-    assert_eq!(p.has_attribute("attr"), true);
 
-    assert_eq!(p.attribute(("http://www.w3.org", "attr")), Some("a_ns"));
-    assert_eq!(p.has_attribute(("http://www.w3.org", "attr")), true);
-
-    assert_eq!(p.attribute("attr2"), None);
-    assert_eq!(p.has_attribute("attr2"), false);
-
-    assert_eq!(p.attribute(("http://www.w2.org", "attr")), None);
-    assert_eq!(p.has_attribute(("http://www.w2.org", "attr")), false);
-
-    assert_eq!(p.attribute("b"), None);
-    assert_eq!(p.has_attribute("b"), false);
-
-    assert_eq!(p.attribute("xmlns"), None);
-    assert_eq!(p.has_attribute("xmlns"), false);
+    assert!(p.has_attribute("a:attr"));
+    assert!(p.has_attribute("b:attr"));
+    assert!(p.has_attribute("attr"));
 }
 
 #[test]
@@ -86,7 +75,13 @@ fn get_pi() {
 
     let doc = Document::parse(data).unwrap();
     let node = doc.root().first_child().unwrap();
-    assert_eq!(node.pi(), Some(PI { target: "target", value: Some("value") }));
+    assert_eq!(
+        node.pi(),
+        Some(PI {
+            target: "target",
+            value: Some("value")
+        })
+    );
 }
 
 #[test]
@@ -114,7 +109,10 @@ fn lookup_namespace_uri() {
 
     let doc = Document::parse(data).unwrap();
     let node = doc.root_element();
-    assert_eq!(node.lookup_namespace_uri(Some("n1")), Some("http://www.w3.org"));
+    assert_eq!(
+        node.lookup_namespace_uri(Some("n1")),
+        Some("http://www.w3.org")
+    );
     assert_eq!(node.lookup_namespace_uri(None), Some("http://www.w4.org"));
     assert_eq!(node.lookup_namespace_uri(Some("n2")), None);
 }
@@ -131,7 +129,10 @@ fn text_pos_01() {
     let doc = Document::parse(data).unwrap();
     let node = doc.root_element();
 
-    assert_eq!(doc.text_pos_at(doc.root().range().start), TextPos::new(1, 1));
+    assert_eq!(
+        doc.text_pos_at(doc.root().range().start),
+        TextPos::new(1, 1)
+    );
     assert_eq!(doc.text_pos_at(doc.root().range().end), TextPos::new(5, 1));
 
     assert_eq!(doc.text_pos_at(node.range().start), TextPos::new(1, 1));
@@ -139,7 +140,10 @@ fn text_pos_01() {
 
     if let Some(attr) = node.attribute_node("a") {
         assert_eq!(doc.text_pos_at(attr.range().start), TextPos::new(1, 4));
-        assert_eq!(doc.text_pos_at(attr.value_range().start), TextPos::new(1, 7));
+        assert_eq!(
+            doc.text_pos_at(attr.value_range().start),
+            TextPos::new(1, 7)
+        );
     }
 
     // first child is a text/whitespace, not a comment
@@ -165,7 +169,10 @@ fn text_pos_02() {
 
     if let Some(attr) = node.attribute_node(("http://www.w3.org", "a")) {
         assert_eq!(doc.text_pos_at(attr.range().start), TextPos::new(1, 36));
-        assert_eq!(doc.text_pos_at(attr.value_range().start), TextPos::new(1, 42));
+        assert_eq!(
+            doc.text_pos_at(attr.value_range().start),
+            TextPos::new(1, 42)
+        );
     }
 }
 
@@ -239,7 +246,8 @@ fn nodes_document_order() {
 #[test]
 fn lifetimes() {
     fn f<'a, 'd, F, R>(doc: &'a roxmltree::Document<'d>, fun: F) -> R
-        where F: Fn(&'a roxmltree::Document<'d>) -> R
+    where
+        F: Fn(&'a roxmltree::Document<'d>) -> R,
     {
         fun(doc)
     }
@@ -265,7 +273,7 @@ fn lifetimes() {
 
 #[test]
 fn tag_name_lifetime() {
-    fn get_tag_name<'a, 'input>(node: &'a Node<'a, 'input>) -> &'input str {
+    fn get_tag_name<'a, 'input>(node: &'a Node<'a, 'input>) -> String {
         node.tag_name().name()
     }
 

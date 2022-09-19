@@ -1,29 +1,13 @@
-use alloc::borrow::{Cow, Borrow, ToOwned};
+use alloc::borrow::{Borrow, Cow, ToOwned};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-use xmlparser::{
-    self,
-    Reference,
-    Stream,
-    StrSpan,
-    TextPos,
-};
+use xmlparser::{self, Reference, StrSpan, Stream, TextPos};
 
 use crate::{
-    NS_XML_URI,
-    NS_XMLNS_URI,
-    Attribute,
-    Document,
-    ExpandedNameOwned,
-    Namespaces,
-    NodeData,
-    NodeId,
-    NodeKind,
-    PI,
-    ShortRange,
+    Attribute, Document, ExpandedNameOwned, Namespaces, NodeData, NodeId, NodeKind, ShortRange,
+    NS_XMLNS_URI, NS_XML_URI, PI,
 };
-
 
 /// A list of all possible errors.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -52,7 +36,11 @@ pub enum Error {
 
     /// Incorrect tree structure.
     #[allow(missing_docs)]
-    UnexpectedCloseTag { expected: String, actual: String, pos: TextPos },
+    UnexpectedCloseTag {
+        expected: String,
+        actual: String,
+        pos: TextPos,
+    },
 
     /// Entity value starts with a close tag.
     ///
@@ -123,7 +111,7 @@ impl Error {
             Error::InvalidAttributeValue(pos) => pos,
             Error::DuplicatedAttribute(ref _name, pos) => pos,
             Error::ParserError(ref err) => err.pos(),
-            _ => TextPos::new(1, 1)
+            _ => TextPos::new(1, 1),
         }
     }
 }
@@ -142,13 +130,25 @@ impl core::fmt::Display for Error {
                 write!(f, "'xml' namespace prefix mapped to wrong URI at {}", pos)
             }
             Error::UnexpectedXmlUri(pos) => {
-                write!(f, "the 'xml' namespace URI is used for not 'xml' prefix at {}", pos)
+                write!(
+                    f,
+                    "the 'xml' namespace URI is used for not 'xml' prefix at {}",
+                    pos
+                )
             }
             Error::UnexpectedXmlnsUri(pos) => {
-                write!(f, "the 'xmlns' URI is used at {}, but it must not be declared", pos)
+                write!(
+                    f,
+                    "the 'xmlns' URI is used at {}, but it must not be declared",
+                    pos
+                )
             }
             Error::InvalidElementNamePrefix(pos) => {
-                write!(f, "the 'xmlns' prefix is used at {}, but it must not be", pos)
+                write!(
+                    f,
+                    "the 'xmlns' prefix is used at {}, but it must not be",
+                    pos
+                )
             }
             Error::DuplicatedNamespace(ref name, pos) => {
                 write!(f, "namespace '{}' at {} is already defined", name, pos)
@@ -156,8 +156,16 @@ impl core::fmt::Display for Error {
             Error::UnknownNamespace(ref name, pos) => {
                 write!(f, "an unknown namespace prefix '{}' at {}", name, pos)
             }
-            Error::UnexpectedCloseTag { ref expected, ref actual, pos } => {
-                write!(f, "expected '{}' tag, not '{}' at {}", expected, actual, pos)
+            Error::UnexpectedCloseTag {
+                ref expected,
+                ref actual,
+                pos,
+            } => {
+                write!(
+                    f,
+                    "expected '{}' tag, not '{}' at {}",
+                    expected, actual, pos
+                )
             }
             Error::UnexpectedEntityCloseTag(pos) => {
                 write!(f, "unexpected close tag at {}", pos)
@@ -201,9 +209,8 @@ impl std::error::Error for Error {
     }
 }
 
-
 /// Parsing options.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ParsingOptions {
     /// Allow DTD parsing.
     ///
@@ -225,12 +232,9 @@ pub struct ParsingOptions {
 #[allow(clippy::derivable_impls)]
 impl Default for ParsingOptions {
     fn default() -> Self {
-        ParsingOptions {
-            allow_dtd: false,
-        }
+        ParsingOptions { allow_dtd: false }
     }
 }
-
 
 struct AttributeData<'input> {
     prefix: StrSpan<'input>,
@@ -286,8 +290,8 @@ impl<'input> Document<'input> {
         let new_child_id = NodeId::from(self.nodes.len());
 
         let appending_element = match kind {
-            NodeKind::Element {..} => true,
-            _ => false
+            NodeKind::Element { .. } => true,
+            _ => false,
         };
 
         self.nodes.push(NodeData {
@@ -316,7 +320,7 @@ impl<'input> Document<'input> {
     }
 }
 
-struct Entity<'input>  {
+struct Entity<'input> {
     name: &'input str,
     value: StrSpan<'input>,
 }
@@ -354,7 +358,6 @@ impl<'input> TagNameSpan<'input> {
         Self { prefix, name, span }
     }
 }
-
 
 /// An entity loop detector.
 ///
@@ -432,7 +435,6 @@ impl LoopDetector {
     }
 }
 
-
 fn parse(text: &str, opt: ParsingOptions) -> Result<Document, Error> {
     if text.len() > core::u32::MAX as usize {
         return Err(Error::SizeLimit);
@@ -471,13 +473,20 @@ fn parse(text: &str, opt: ParsingOptions) -> Result<Document, Error> {
         range: (0..text.len()).into(),
     });
 
-    doc.namespaces.push_ns(Some("xml"), Cow::Borrowed(NS_XML_URI));
+    doc.namespaces
+        .push_ns(Some("xml"), Cow::Borrowed(NS_XML_URI));
 
     let parser = xmlparser::Tokenizer::from(text);
     let parent_id = doc.root().id;
     let mut tag_name = TagNameSpan::new_null();
-    process_tokens(parser, parent_id, &mut LoopDetector::default(),
-                   &mut tag_name, &mut pd, &mut doc)?;
+    process_tokens(
+        parser,
+        parent_id,
+        &mut LoopDetector::default(),
+        &mut tag_name,
+        &mut pd,
+        &mut doc,
+    )?;
 
     if !doc.root().children().any(|n| n.is_element()) {
         return Err(Error::NoRootNode);
@@ -502,7 +511,11 @@ fn process_tokens<'input>(
     for token in parser {
         let token = token?;
         match token {
-            xmlparser::Token::ProcessingInstruction { target, content, span } => {
+            xmlparser::Token::ProcessingInstruction {
+                target,
+                content,
+                span,
+            } => {
                 let pi = NodeKind::PI(PI {
                     target: target.as_str(),
                     value: content.map(|v| v.as_str()),
@@ -510,17 +523,33 @@ fn process_tokens<'input>(
                 doc.append(parent_id, pi, span.range().into(), pd);
             }
             xmlparser::Token::Comment { text, span } => {
-                doc.append(parent_id, NodeKind::Comment(text.as_str()), span.range().into(), pd);
+                doc.append(
+                    parent_id,
+                    NodeKind::Comment(text.as_str()),
+                    span.range().into(),
+                    pd,
+                );
             }
             xmlparser::Token::Text { text } => {
                 process_text(text, parent_id, loop_detector, pd, doc)?;
             }
             xmlparser::Token::Cdata { text, span } => {
                 let cow_str = Cow::Borrowed(text.as_str());
-                append_text(cow_str, parent_id, span.range().into(), pd.after_text, doc, pd);
+                append_text(
+                    cow_str,
+                    parent_id,
+                    span.range().into(),
+                    pd.after_text,
+                    doc,
+                    pd,
+                );
                 pd.after_text = true;
             }
-            xmlparser::Token::ElementStart { prefix, local, span } => {
+            xmlparser::Token::ElementStart {
+                prefix,
+                local,
+                span,
+            } => {
                 if prefix.as_str() == "xmlns" {
                     let pos = err_pos_from_span(doc.text, prefix);
                     return Err(Error::InvalidElementNamePrefix(pos));
@@ -528,7 +557,12 @@ fn process_tokens<'input>(
 
                 *tag_name = TagNameSpan::new(prefix, local, span);
             }
-            xmlparser::Token::Attribute { prefix, local, value, span } => {
+            xmlparser::Token::Attribute {
+                prefix,
+                local,
+                value,
+                span,
+            } => {
                 process_attribute(prefix, local, value, span, loop_detector, pd, doc)?;
             }
             xmlparser::Token::ElementEnd { end, span } => {
@@ -539,19 +573,24 @@ fn process_tokens<'input>(
                     return Err(Error::DtdDetected);
                 }
             }
-            xmlparser::Token::EntityDeclaration { name, definition, .. } => {
+            xmlparser::Token::EntityDeclaration {
+                name, definition, ..
+            } => {
                 if let xmlparser::EntityDefinition::EntityValue(value) = definition {
-                    pd.entities.push(Entity { name: name.as_str(), value });
+                    pd.entities.push(Entity {
+                        name: name.as_str(),
+                        value,
+                    });
                 }
             }
             _ => {}
         }
 
         match token {
-            xmlparser::Token::ProcessingInstruction { .. } |
-            xmlparser::Token::Comment { .. } |
-            xmlparser::Token::ElementStart { .. } |
-            xmlparser::Token::ElementEnd { .. } => {
+            xmlparser::Token::ProcessingInstruction { .. }
+            | xmlparser::Token::Comment { .. }
+            | xmlparser::Token::ElementStart { .. }
+            | xmlparser::Token::ElementEnd { .. } => {
                 pd.after_text = false;
             }
             _ => {}
@@ -625,7 +664,11 @@ fn process_attribute<'input>(
         doc.namespaces.push_ns(None, value);
     } else {
         pd.tmp_attrs.push(AttributeData {
-            prefix, local, value, range, value_range
+            prefix,
+            local,
+            value,
+            range,
+            value_range,
         });
     }
 
@@ -646,7 +689,9 @@ fn process_element<'input>(
         // <root>&p;</root>
 
         if let xmlparser::ElementEnd::Close(..) = end_token {
-            return Err(Error::UnexpectedEntityCloseTag(err_pos_from_span(doc.text, token_span)));
+            return Err(Error::UnexpectedEntityCloseTag(err_pos_from_span(
+                doc.text, token_span,
+            )));
         } else {
             unreachable!("should be already checked by the xmlparser");
         }
@@ -655,26 +700,26 @@ fn process_element<'input>(
     let namespaces = resolve_namespaces(pd.ns_start_idx, *parent_id, doc);
     pd.ns_start_idx = doc.namespaces.len();
 
-    let attributes = resolve_attributes(pd.attrs_start_idx, namespaces,
-                                        &mut pd.tmp_attrs, doc)?;
+    let attributes = resolve_attributes(pd.attrs_start_idx, namespaces, &mut pd.tmp_attrs, doc)?;
     pd.attrs_start_idx = doc.attrs.len();
     pd.tmp_attrs.clear();
 
     match end_token {
         xmlparser::ElementEnd::Empty => {
             let tag_ns_uri = get_ns_by_prefix(doc, namespaces, tag_name.prefix)?;
-            let new_element_id = doc.append(*parent_id,
+            let new_element_id = doc.append(
+                *parent_id,
                 NodeKind::Element {
                     tag_name: ExpandedNameOwned {
                         ns: tag_ns_uri,
                         prefix: tag_name.prefix.as_str(),
-                        name: tag_name.name.as_str(),
+                        name: tag_name.name.to_string(),
                     },
                     attributes,
                     namespaces,
                 },
                 (tag_name.span.start()..token_span.end()).into(),
-                pd
+                pd,
             );
             pd.awaiting_subtree.push(new_element_id);
         }
@@ -686,7 +731,7 @@ fn process_element<'input>(
             if let NodeKind::Element { ref tag_name, .. } = doc.nodes[parent_id.get_usize()].kind {
                 if prefix != tag_name.prefix || local != tag_name.name {
                     return Err(Error::UnexpectedCloseTag {
-                        expected: gen_qname_string(tag_name.prefix, tag_name.name),
+                        expected: gen_qname_string(tag_name.prefix, &tag_name.name),
                         actual: gen_qname_string(prefix, local),
                         pos: err_pos_from_span(doc.text, token_span),
                     });
@@ -702,18 +747,19 @@ fn process_element<'input>(
         }
         xmlparser::ElementEnd::Open => {
             let tag_ns_uri = get_ns_by_prefix(doc, namespaces, tag_name.prefix)?;
-            *parent_id = doc.append(*parent_id,
+            *parent_id = doc.append(
+                *parent_id,
                 NodeKind::Element {
                     tag_name: ExpandedNameOwned {
                         ns: tag_ns_uri,
                         prefix: tag_name.prefix.as_str(),
-                        name: tag_name.name.as_str(),
+                        name: tag_name.name.to_string(),
                     },
                     attributes,
                     namespaces,
                 },
                 (tag_name.span.start()..token_span.end()).into(),
-                pd
+                pd,
             );
         }
     }
@@ -721,11 +767,7 @@ fn process_element<'input>(
     Ok(())
 }
 
-fn resolve_namespaces(
-    start_idx: usize,
-    parent_id: NodeId,
-    doc: &mut Document,
-) -> ShortRange {
+fn resolve_namespaces(start_idx: usize, parent_id: NodeId, doc: &mut Document) -> ShortRange {
     if let NodeKind::Element { ref namespaces, .. } = doc.nodes[parent_id.get_usize()].kind {
         let parent_ns = *namespaces;
         if start_idx == doc.namespaces.len() {
@@ -745,7 +787,7 @@ fn resolve_namespaces(
 
 fn resolve_attributes<'input>(
     start_idx: usize,
-    namespaces: ShortRange,
+    _namespaces: ShortRange,
     tmp_attrs: &mut [AttributeData<'input>],
     doc: &mut Document<'input>,
 ) -> Result<ShortRange, Error> {
@@ -754,24 +796,33 @@ fn resolve_attributes<'input>(
     }
 
     for attr in tmp_attrs {
-        let ns = if attr.prefix.as_str() == "xml" {
-            // The prefix 'xml' is by definition bound to the namespace name
-            // http://www.w3.org/XML/1998/namespace.
-            Some(Cow::Borrowed(NS_XML_URI))
-        } else if attr.prefix.is_empty() {
-            // 'The namespace name for an unprefixed attribute name
-            // always has no value.'
-            None
-        } else {
-            get_ns_by_prefix(doc, namespaces, attr.prefix)?
+        let ns = {
+            if !attr.prefix.is_empty() {
+                Some(attr.prefix.to_string())
+            } else {
+                None
+            }
         };
 
         // We do not store attribute prefixes since `ExpandedNameOwned::prefix`
         // is used only for closing tags matching during parsing.
-        let attr_name = ExpandedNameOwned { ns, prefix: "", name: attr.local.as_str() };
+        let attr_name = ExpandedNameOwned {
+            ns: None,
+            prefix: "",
+            name: {
+                if let Some(ns) = ns {
+                    std::format!("{}:{}", ns, attr.local.as_str())
+                } else {
+                    attr.local.to_string()
+                }
+            },
+        };
 
         // Check for duplicated attributes.
-        if doc.attrs[start_idx..].iter().any(|attr| attr.name == attr_name) {
+        if doc.attrs[start_idx..]
+            .iter()
+            .any(|attr| attr.name == attr_name)
+        {
             let pos = err_pos_from_qname(doc.text, attr.prefix, attr.local);
             return Err(Error::DuplicatedAttribute(attr.local.to_string(), pos));
         }
@@ -797,7 +848,14 @@ fn process_text<'input>(
 ) -> Result<(), Error> {
     // Add text as is if it has only valid characters.
     if !text.as_str().bytes().any(|b| b == b'&' || b == b'\r') {
-        append_text(Cow::Borrowed(text.as_str()), parent_id, text.range().into(), pd.after_text, doc, pd);
+        append_text(
+            Cow::Borrowed(text.as_str()),
+            parent_id,
+            text.range().into(),
+            pd.after_text,
+            doc,
+            pd,
+        );
         pd.after_text = true;
         return Ok(());
     }
@@ -833,7 +891,14 @@ fn process_text<'input>(
 
                 if !pd.buffer.is_empty() {
                     let cow_text = Cow::Owned(pd.buffer.to_str().to_owned());
-                    append_text(cow_text, parent_id, text.range().into(), pd.after_text, doc, pd);
+                    append_text(
+                        cow_text,
+                        parent_id,
+                        text.range().into(),
+                        pd.after_text,
+                        doc,
+                        pd,
+                    );
                     pd.after_text = true;
                     pd.buffer.clear();
                 }
@@ -853,7 +918,14 @@ fn process_text<'input>(
 
     if !pd.buffer.is_empty() {
         let cow_text = Cow::Owned(pd.buffer.to_str().to_owned());
-        append_text(cow_text, parent_id, text.range().into(), pd.after_text, doc, pd);
+        append_text(
+            cow_text,
+            parent_id,
+            text.range().into(),
+            pd.after_text,
+            doc,
+            pd,
+        );
         pd.after_text = true;
         pd.buffer.clear();
     }
@@ -867,7 +939,7 @@ fn append_text<'input>(
     range: ShortRange,
     after_text: bool,
     doc: &mut Document<'input>,
-    pd: &mut ParserData<'input>
+    pd: &mut ParserData<'input>,
 ) {
     if after_text {
         // Prepend to a previous text node.
@@ -908,20 +980,14 @@ fn parse_next_chunk<'a>(
     if c == b'&' {
         let start = s.pos();
         match s.try_consume_reference() {
-            Some(Reference::Char(ch)) => {
-                Ok(NextChunk::Char(ch))
-            }
-            Some(Reference::Entity(name)) => {
-                match entities.iter().find(|e| e.name == name) {
-                    Some(entity) => {
-                        Ok(NextChunk::Text(entity.value))
-                    }
-                    None => {
-                        let pos = s.gen_text_pos_from(start);
-                        Err(Error::UnknownEntityReference(name.into(), pos))
-                    }
+            Some(Reference::Char(ch)) => Ok(NextChunk::Char(ch)),
+            Some(Reference::Entity(name)) => match entities.iter().find(|e| e.name == name) {
+                Some(entity) => Ok(NextChunk::Text(entity.value)),
+                None => {
+                    let pos = s.gen_text_pos_from(start);
+                    Err(Error::UnknownEntityReference(name.into(), pos))
                 }
-            }
+            },
             None => {
                 let pos = s.gen_text_pos_from(start);
                 Err(Error::MalformedEntityReference(pos))
@@ -957,10 +1023,7 @@ fn is_normalization_required(text: &StrSpan) -> bool {
 
     fn check(c: u8) -> bool {
         match c {
-              b'&'
-            | b'\t'
-            | b'\n'
-            | b'\r' => true,
+            b'&' | b'\t' | b'\n' | b'\r' => true,
             _ => false,
         }
     }
@@ -1006,20 +1069,18 @@ fn _normalize_attribute(
                     }
                 }
             }
-            Some(Reference::Entity(name)) => {
-                match entities.iter().find(|e| e.name == name) {
-                    Some(entity) => {
-                        loop_detector.inc_references(&s)?;
-                        loop_detector.inc_depth(&s)?;
-                        _normalize_attribute(input, entity.value, entities, loop_detector, buffer)?;
-                        loop_detector.dec_depth();
-                    }
-                    None => {
-                        let pos = s.gen_text_pos_from(start);
-                        return Err(Error::UnknownEntityReference(name.into(), pos));
-                    }
+            Some(Reference::Entity(name)) => match entities.iter().find(|e| e.name == name) {
+                Some(entity) => {
+                    loop_detector.inc_references(&s)?;
+                    loop_detector.inc_depth(&s)?;
+                    _normalize_attribute(input, entity.value, entities, loop_detector, buffer)?;
+                    loop_detector.dec_depth();
                 }
-            }
+                None => {
+                    let pos = s.gen_text_pos_from(start);
+                    return Err(Error::UnknownEntityReference(name.into(), pos));
+                }
+            },
             None => {
                 let pos = s.gen_text_pos_from(start);
                 return Err(Error::MalformedEntityReference(pos));
@@ -1039,9 +1100,14 @@ fn get_ns_by_prefix<'input>(
     //
     // Example:
     // <e xmlns='http://www.w3.org'/>
-    let prefix_opt = if prefix.is_empty() { None } else { Some(prefix.as_str()) };
+    let prefix_opt = if prefix.is_empty() {
+        None
+    } else {
+        Some(prefix.as_str())
+    };
 
-    let uri = doc.namespaces[range.to_urange()].iter()
+    let uri = doc.namespaces[range.to_urange()]
+        .iter()
         .find(|ns| ns.name == prefix_opt)
         .map(|ns| ns.uri.clone());
 
@@ -1088,7 +1154,6 @@ fn err_pos_from_qname(input: &str, prefix: StrSpan, local: StrSpan) -> TextPos {
     err_pos_from_span(input, err_span)
 }
 
-
 mod internals {
     use alloc::vec::Vec;
 
@@ -1104,10 +1169,7 @@ mod internals {
             let mut buf = [0xFF; 4];
             c.encode_utf8(&mut buf);
 
-            CharToBytes {
-                buf,
-                idx: 0,
-            }
+            CharToBytes { buf, idx: 0 }
         }
     }
 
@@ -1130,7 +1192,6 @@ mod internals {
             None
         }
     }
-
 
     pub struct TextBuffer {
         buf: Vec<u8>,
