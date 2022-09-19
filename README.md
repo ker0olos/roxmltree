@@ -24,4 +24,6 @@ assert_eq!(doc.root_element().attribute("ns:a"), Some("c"));
 // assert!(doc.root_element().attribute(("http://www.w3.org", "a")));
 ```
 
-![Original README](https://github.com/ker0olos/roxmltree/blob/master/README.og.md)
+---
+
+[Original README](https://github.com/ker0olos/roxmltree/blob/master/README.og.md)
