@@ -1028,6 +1028,19 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
         }
     }
 
+    /// Returns element's attributes in their original order.
+    #[inline]
+    pub fn ordered_attributes(&self) -> Vec<(&str, &str)> {
+        if let NodeKind::Element { ref attributes, .. } = self.d.kind {
+            self.doc.attrs[attributes.to_urange()]
+                .iter()
+                .map(|attr| (attr.name(), attr.value()))
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
     /// Returns element's namespaces.
     ///
     /// # Examples
