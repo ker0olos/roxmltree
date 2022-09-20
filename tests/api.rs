@@ -49,6 +49,17 @@ fn get_text_02() {
 }
 
 #[test]
+fn api_00() {
+    let data = "<e xmlns:ns='http://www.w3.org' a='b' ns:a='c'/>";
+    let doc = roxmltree::Document::parse(data).unwrap();
+
+    let p = doc.root_element();
+
+    assert_eq!(p.xml(), data);
+    assert_eq!(p.attributes_xml(), Some("a='b' ns:a='c'"));
+}
+
+#[test]
 fn api_01() {
     let data = "\
 <e a:attr='a_ns' b:attr='b_ns' attr='no_ns' xmlns:b='http://www.ietf.org' \

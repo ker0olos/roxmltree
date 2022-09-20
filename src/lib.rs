@@ -940,18 +940,51 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
         }
     }
 
+    /// Returns the original element.
+    pub fn xml(&self) -> &str {
+        &self.doc.text[self.d.range.to_urange()]
+    }
+
+    /// Returns the original element's attributes.
+    pub fn attributes_xml(&self) -> Option<&str> {
+        let attributes = match self.d.kind {
+            NodeKind::Element { ref attributes, .. } => &self.doc.attrs[attributes.to_urange()],
+            _ => &[],
+        };
+
+        if !attributes.is_empty() {
+            let start = attributes[0].range.start;
+            let end = attributes.last().unwrap().range.end;
+
+            let range = Range {
+                start: start as usize,
+                end: end as usize,
+            };
+
+            Some(&self.doc.text[range])
+        } else {
+            None
+        }
+    }
+
     /// Returns element's attribute object.
     ///
     /// The same as [`attribute()`], but returns the `Attribute` itself instead of a value string.
     ///
     /// [`attribute()`]: struct.Node.html#method.attribute
-    // pub fn attribute_node<'n, 'm, N>(&self, name: N) -> Option<&'a Attribute<'input>>
-    // where
-    //     N: Into<ExpandedName<'n>>,
-    // {
-    //     let name = name.into();
-    //     self.attributes().iter().find(|a| a.name.as_ref() == name)
-    // }
+    pub fn attribute_node<'n, 'm, N>(&self, name: N) -> Option<&'a Attribute<'input>>
+    where
+        N: Into<ExpandedName<'n>>,
+    {
+        let attributes = match self.d.kind {
+            NodeKind::Element { ref attributes, .. } => &self.doc.attrs[attributes.to_urange()],
+            _ => &[],
+        };
+
+        let name = name.into();
+
+        attributes.iter().find(|a| a.name.as_ref() == name)
+    }
 
     /// Checks that element has a specified attribute.
     ///
