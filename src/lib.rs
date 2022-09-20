@@ -13,7 +13,6 @@ License: ISC.
 [parsing doc]: https://github.com/RazrFalcon/roxmltree/blob/master/docs/parsing.md
 */
 
-#![no_std]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(missing_copy_implementations)]
@@ -22,8 +21,6 @@ License: ISC.
 #![allow(clippy::match_like_matches_macro)]
 
 extern crate alloc;
-
-#[cfg(feature = "std")]
 extern crate std;
 
 use alloc::borrow::{Cow, ToOwned};
@@ -33,6 +30,7 @@ use core::fmt;
 use core::hash::{Hash, Hasher};
 use core::num::NonZeroU32;
 use core::ops::Deref;
+use std::collections::HashMap;
 
 pub use xmlparser::TextPos;
 
@@ -238,7 +236,7 @@ impl<'input> fmt::Debug for Document<'input> {
                 if child.is_element() {
                     writeln_indented!(depth, f, "Element {{");
                     writeln_indented!(depth, f, "    tag_name: {:?}", child.tag_name());
-                    print_vec("attributes", child.attributes(), depth + 1, f)?;
+                    // print_vec("attributes", child.attributes(), depth + 1, f)?;
                     print_vec("namespaces", child.namespaces(), depth + 1, f)?;
 
                     if child.has_children() {
@@ -931,15 +929,15 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
     /// assert_eq!(doc.root_element().attribute("a"), Some("b"));
     /// assert_eq!(doc.root_element().attribute(("http://www.w3.org", "a")), Some("c"));
     /// ```
-    pub fn attribute<'n, 'm, N>(&self, name: N) -> Option<&'a str>
-    where
-        N: Into<ExpandedName<'n>>,
-    {
-        let name = name.into();
-        self.attributes()
-            .iter()
-            .find(|a| a.name.as_ref() == name)
-            .map(|a| a.value.as_ref())
+    pub fn attribute(&self, name: &str) -> Option<&str> {
+        let attributes = self.attributes();
+
+        if attributes.contains_key(name) {
+            let value = *attributes.get(name).unwrap();
+            Some(value)
+        } else {
+            None
+        }
     }
 
     /// Returns element's attribute object.
@@ -947,13 +945,13 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
     /// The same as [`attribute()`], but returns the `Attribute` itself instead of a value string.
     ///
     /// [`attribute()`]: struct.Node.html#method.attribute
-    pub fn attribute_node<'n, 'm, N>(&self, name: N) -> Option<&'a Attribute<'input>>
-    where
-        N: Into<ExpandedName<'n>>,
-    {
-        let name = name.into();
-        self.attributes().iter().find(|a| a.name.as_ref() == name)
-    }
+    // pub fn attribute_node<'n, 'm, N>(&self, name: N) -> Option<&'a Attribute<'input>>
+    // where
+    //     N: Into<ExpandedName<'n>>,
+    // {
+    //     let name = name.into();
+    //     self.attributes().iter().find(|a| a.name.as_ref() == name)
+    // }
 
     /// Checks that element has a specified attribute.
     ///
@@ -970,12 +968,8 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
     /// assert!(!doc.root_element().has_attribute("b"));
     /// assert!(!doc.root_element().has_attribute(("http://www.w4.org", "a")));
     /// ```
-    pub fn has_attribute<'n, 'm, N>(&self, name: N) -> bool
-    where
-        N: Into<ExpandedName<'n>>,
-    {
-        let name = name.into();
-        self.attributes().iter().any(|a| a.name.as_ref() == name)
+    pub fn has_attribute(&self, name: &str) -> bool {
+        self.attributes().contains_key(name)
     }
 
     /// Returns element's attributes.
@@ -990,10 +984,14 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
     /// assert_eq!(doc.root_element().attributes().len(), 2);
     /// ```
     #[inline]
-    pub fn attributes(&self) -> &'a [Attribute<'input>] {
-        match self.d.kind {
-            NodeKind::Element { ref attributes, .. } => &self.doc.attrs[attributes.to_urange()],
-            _ => &[],
+    pub fn attributes(&self) -> HashMap<&str, &str> {
+        if let NodeKind::Element { ref attributes, .. } = self.d.kind {
+            self.doc.attrs[attributes.to_urange()]
+                .iter()
+                .map(|attr| (attr.name(), attr.value()))
+                .collect()
+        } else {
+            HashMap::new()
         }
     }
 

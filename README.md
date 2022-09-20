@@ -4,7 +4,9 @@ nor does it preserve their original locations.
 
 Instead it uses `HashMap` to store attributes.
 
-The result is faster attribute lookups faster and with the namespace included in the key.
+The result is faster attribute lookups? and with the namespace included in the key.
+
+> I didn't benchmark it. I tried to optimized it a lot more but ran into a lot of issues. so I gave up. I know that at least it's not slower.
 
 ```rust
 let doc = roxmltree::Document::parse(

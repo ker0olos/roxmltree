@@ -1,9 +1,5 @@
-use std::{fs, path::PathBuf};
-
 fn main() {
-    let input = PathBuf::from("examples/face.svg");
+    let doc = roxmltree::Document::parse("<e xmlns:ns='http://www.w3.org' a:ns='50'/>").unwrap();
 
-    let contents = fs::read_to_string(input).unwrap();
-
-    let doc = roxmltree::Document::parse(&contents).unwrap();
+    println!("{:?}", doc.root_element().attribute("a:ns").unwrap());
 }
