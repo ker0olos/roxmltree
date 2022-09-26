@@ -1041,6 +1041,15 @@ impl<'a, 'input: 'a> Node<'a, 'input> {
         }
     }
 
+    /// Returns element's attributes as owned strings.
+    #[inline]
+    pub fn owned_attributes(&self) -> HashMap<String, String> {
+        self.attributes()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
     /// Returns element's namespaces.
     ///
     /// # Examples
